@@ -3,6 +3,8 @@ const User = require('../model/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const redisClient = require('../config/redis');
+
 // Register a new user
 exports.register = async (req, res) => {
     const { name, email, password, phone_no, address } = req.body;
@@ -44,3 +46,25 @@ exports.login = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.Lognout = async (req, res, next) => {
+    try {
+      const token = req.cookies.token;
+  
+      if (!token) {
+        return res.status(400).json({ message: "Token not found!" });
+      }
+  
+      // Delegate token blacklist logic to service
+      const result = await redisClient.set(`blacklist_${token}`, "true", {
+        EX: 3600, // Token will be blacklisted for 1 hour
+      });
+  
+      res.clearCookie("token");
+  
+      res.status(200).json({ message: "Logout successful!" });
+    } catch (error) {
+      next(error);
+      console.log(error.message);
+    }
+  };
